@@ -40,9 +40,9 @@ Param($File)
     LogEntry "Computer`t`tUser`tResult`t`tAction"
     LogEntry " "
     ForEach ($Collection in $Collections) {
-        If (-Not (Test-Path -Path "$AppPath\$($Collection.Result).txt")) {
+        If ((-Not (Test-Path -Path "$AppPath\$($Collection.Result).txt")) -or (Get-Item -Path "$AppPath\$($Collection.Result).txt").LastWriteTime -lt (Get-Date).AddDays(-1)) {
             LogEntry "Creating Cache for collection $($Collection.Collection)"
-            Get-CfgCollectionMembers -Collection $Collection.Collection | Select-Object -ExpandProperty ComputerName | Out-File -FilePath "$AppPath\$($Collection.Result).txt"
+            Get-CfgCollectionMembers -Collection $Collection.Collection | Select-Object -ExpandProperty ComputerName | Out-File -FilePath "$AppPath\$($Collection.Result).txt" -Force
         }
 
         $ComputersToCheck | ForEach-Object {

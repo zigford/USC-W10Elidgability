@@ -6,7 +6,7 @@ Param($msg)
     $txtOutput.Text+="$msg`r`n"
     $txtOutput.Update()
     $txtOutput.Refresh()
-    $txtOutput.ScrollToCaret()
+   
 }
 $button3_Click={
 Param($File)
@@ -35,10 +35,12 @@ Param($File)
         [PSCustomObject]@{Result = 'Disk Space';Collection='All Machines Inellidgable for Windows 10 - Disk Space'},
         [PSCustomObject]@{Result = 'End of Life';Collection='All Machines Inellidgable for Windows 10 - End Of Life'},
         [PSCustomObject]@{Result = 'Client Version';Collection='All Machines Inellidgable for Windows 10 - Client Version'},
-        [PSCustomObject]@{Result = 'Virtual Machine';Collection='All Machines Inellidgable for Windows 10 - Virtual Machines'}
+        [PSCustomObject]@{Result = 'Virtual Machine';Collection='All Machines Inellidgable for Windows 10 - Virtual Machines'},
+        [PSCustomObject]@{Result = 'Student OU';Collection='All Machines Inellidgable for Windows 10 - Student OU'},
+        [PSCustomObject]@{Result = 'Other';Collection='All Machines Inellidgable for Windows 10 - Other'},
+        [PSCustomObject]@{Result = 'Windows 10';Collection='All USC Windows 10 Devices'}
     )
-    LogEntry "Computer`t`tUser`tResult`t`tAction"
-    LogEntry " "
+    $Log = @()
     ForEach ($Collection in $Collections) {
         If ((-Not (Test-Path -Path "$AppPath\$($Collection.Result).txt")) -or (Get-Item -Path "$AppPath\$($Collection.Result).txt").LastWriteTime -lt (Get-Date).AddDays(-1)) {
             LogEntry "Creating Cache for collection $($Collection.Collection)"
@@ -46,9 +48,9 @@ Param($File)
         }
 
         $ComputersToCheck | ForEach-Object {
-
             $Comp = $_
             If ($_ -in (Get-Content "$AppPath\$($Collection.Result).txt")) {
+                $IsInACollection = $True
                 $UserName = ginv $Comp | select -expand LastLogonUserName
                 Switch ($Collection.Result) {
                     'Disk Space' {
@@ -56,23 +58,33 @@ Param($File)
                             #LogEntry "Succesfully Connected to $_ D:"
                             $FileCount = (Get-ChildItem -Path \\$Comp\d$).Count
                             If ($FileCount -eq 0) {
-                                LogEntry "$Comp`t`t$UserName`tLow disk space`t`tMerge Disks"
+                                $Log += [PSCustomObject]@{Computer=$Comp;User=$UserName;Result="Low disk space";Action="Merge Disks"}
                             } Else {
-                                LogEntry "$Comp`t`t$UserName`tLow disk space`t`tRemove $FileCount Files and merge disks"
+                                $Log += [PSCustomObject]@{Computer=$Comp;User=$UserName;Result="Low disk space";Action="Remove $FileCount and merge disks"}
                             }
                         } Else {
-                            LogEntry "$Comp`t`t$UserName`tLow disk space`t`tCall client to arrange merge"
+                            $Log += [PSCustomObject]@{Computer=$Comp;User=$UserName;Result="Low disk space";Action="Call client to arrange merge"}
                         }
                     }
                     'Client Version' {
-                        LogEntry "$Comp`t`t$UserName`tOld Client`t`tForce reinstall client from SCCM"
+                        $Log += [PSCustomObject]@{Computer=$Comp;User=$UserName;Result="Old Client";Action="Force reinstall client from SCCM"}
                     }
-                    Default { LogEntry "$Comp`t`t$UserName`t$($Collection.Result)" }
+                    'Student OU' {
+                        $Log += [PSCustomObject]@{Computer=$Comp;User=$UserName;Result="Student OU";Action="Move computer or notify client"}
+                    }
+                    'Windows 10' {
+                        $Log += [PSCustomObject]@{Computer=$Comp;User=$UserName;Result="Windows 10 Computer";Action="No Action Required"} 
+                    }
+                    'Other' {
+                        $Log += [PSCustomObject]@{Computer=$Comp;User=$UserName;Result="Unknown Reason";Action="Contact Jesse or escelate"}
+                    }
+                    Default { $Log += [PSCustomObject]@{Computer=$Comp;User=$UserName;Result=$Collection.Result } }
                 }
             }
         }
 
     }
+    LogEntry "$($Log |Format-Table -Property Computer,User,Result,Action | Out-String -Width 4096)"
     <#Get-CfgCollectionMembers $MainCollection | Select -First 5 | %{
         #Start-Sleep -Seconds 5
         $textOutput.Text += "$($_.ComputerName)`r`n"
@@ -133,8 +145,8 @@ $txtOutput.ClientSize = "$($Form.Width - 22),$($Form.Height - $txtCompList.Heigh
 $txtOutput.AutoSize = $true
 $txtOutput.Multiline = $true
 $txtOutput.ScrollBars = "Vertical"
-$txtOutput.Font = "Microsoft Sans Serif,10"
-$txtOutput.Scr
+$txtOutput.Font = "Courier,10"
+$txtOutput.ScrollToCaret()
 $Form.Controls.Add($txtCompList)
 $Form.Controls.Add($txtOutput)
 $SettingsFile = "$env:LocalAppData\USC\Elidgable\Settings.txt"

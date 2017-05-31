@@ -125,7 +125,7 @@ $Form.AutoSizeMode = "GrowOnly"
 $button3 = New-Object system.windows.Forms.Button
 $button3.Text = "Go"
 $button3.AutoSize = $true
-$button3.Enabled = $False
+$button3.Enabled = $True
 $button3.Add_Click($button3_Click)
 $button3.Anchor = 'Top','Right'
 #$button3 = $null
